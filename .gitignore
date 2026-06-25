@@ -1,0 +1,8 @@
+# Go
+*.test
+*.out
+/coverage.out
+/dist/
+
+# editor / os
+.DS_Store
