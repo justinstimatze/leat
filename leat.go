@@ -75,6 +75,12 @@ func New(repoDir, agentID string, opts ...Option) (*Bus, error) {
 	if b.stateDir == "" {
 		b.stateDir = filepath.Join(repoDir, ".git", "leat")
 	}
+	// Configure a local commit identity so commits AND rebases work even where
+	// no global git identity is set (e.g. CI runners) — a missing identity makes
+	// `pull --rebase` fail silently, stranding the local branch behind and
+	// turning the next push into a non-fast-forward rejection.
+	_, _ = b.git(context.Background(), "config", "user.name", agentID)
+	_, _ = b.git(context.Background(), "config", "user.email", agentID+"@leat")
 	b.cur = loadCursor(filepath.Join(b.stateDir, "cursor-"+agentID+".json"))
 	return b, nil
 }
@@ -273,14 +279,28 @@ func (b *Bus) Publish(ctx context.Context, env Envelope) (Envelope, error) {
 	}
 
 	if b.remote != "" {
-		// Pull-rebase then push to absorb siblings' fast-forwards. Because every
-		// author owns a distinct file, the rebase never conflicts.
-		_, _ = b.git(ctx, "pull", "--rebase", "-q", b.remote, b.branch)
-		if _, err := b.git(ctx, "push", "-q", b.remote, "HEAD:"+b.branch); err != nil {
+		if err := b.pushWithRebase(ctx); err != nil {
 			return env, err
 		}
 	}
 	return env, nil
+}
+
+// pushWithRebase publishes the local commit to the shared branch, rebasing onto
+// any concurrent siblings' commits and retrying on a non-fast-forward push.
+// Per-author lanes guarantee the rebase itself never hits a content conflict
+// (no two agents edit the same file); the retry only handles the window between
+// rebase and push where another writer's push lands first.
+func (b *Bus) pushWithRebase(ctx context.Context) error {
+	const maxTries = 6
+	var pushErr error
+	for try := 0; try < maxTries; try++ {
+		_, _ = b.git(ctx, "pull", "--rebase", "-q", b.remote, b.branch)
+		if _, pushErr = b.git(ctx, "push", "-q", b.remote, "HEAD:"+b.branch); pushErr == nil {
+			return nil
+		}
+	}
+	return fmt.Errorf("push to %s/%s failed after %d tries: %w", b.remote, b.branch, maxTries, pushErr)
 }
 
 // -- fetch ------------------------------------------------------------------
