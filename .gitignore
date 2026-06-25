@@ -1,8 +1,17 @@
-# Go
+# Go build / test artifacts
 *.test
 *.out
 /coverage.out
 /dist/
 
-# editor / os
+# scratch
+/tmp/
+*.log
+
+# editor / OS cruft
+*.swp
+*.swo
+*~
 .DS_Store
+.idea/
+.vscode/
