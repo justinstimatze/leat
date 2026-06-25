@@ -88,10 +88,11 @@ func New(repoDir, agentID string, opts ...Option) (*Bus, error) {
 // AgentID returns this bus's identity.
 func (b *Bus) AgentID() string { return b.agentID }
 
-// RepoDir returns the working-tree path, so a consumer (e.g. ettle's drift /
-// provenance feature) can run its own `git log`/diff over a lane's history —
-// the one capability the snapshot Publish/Collect API intentionally does not
-// cover. leat deliberately does not encapsulate the repo away.
+// RepoDir returns the working-tree path, so a consumer that needs lane history
+// (e.g. drift / provenance by diffing a lane's commits over time) can run its
+// own `git log`/diff — the one capability the snapshot Publish/Collect API
+// intentionally does not cover. leat deliberately does not encapsulate the repo
+// away.
 func (b *Bus) RepoDir() string { return b.repoDir }
 
 // LaneRelPath returns the repo-relative POSIX path of an author's lane (the DM
@@ -146,7 +147,8 @@ func (b *Bus) myLane(chanName string) string {
 
 // laneOwner is the authoritative identity of a lane: its filename stem. A line
 // inside the file claiming a different `from` is a spoof and is dropped on read
-// (the DirBus filename-is-identity lesson, carried into git).
+// — the filename, which only the lane's owner can write under git-host push
+// ACLs, is the identity; the in-record `from` is never trusted over it.
 func laneOwner(path string) string {
 	return strings.TrimSuffix(filepath.Base(path), ".jsonl")
 }

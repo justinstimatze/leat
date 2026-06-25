@@ -1,31 +1,38 @@
 # leat
 
-A git repository used as an append-only, per-author-lane message bus: an
-async, durable, cross-machine, audited transport behind a shared wire format.
-Two agents — on different machines, in different languages — interoperate by
-sharing one git repo and reading each other's lanes.
+*Of the keeping of records, and the avoidance of blots.*
 
-`leat` is the canonical Go implementation of the mcp-dispatch git-transport
-wire contract. The interop seam is the on-disk JSONL format, not this Go API,
-so a consumer in any language interoperates by matching the bytes.
+Brother, attend. This is a scriptorium that wears the habit of a git repository:
+an append-only, per-author message bus — async, durable, borne across machines,
+and faithfully audited behind one shared form of writing. Two scribes on two
+distant machines, schooled in two different tongues, hold converse by sharing a
+single repository and reading one another's chronicles.
 
-## The core idea
+`leat` is the canonical Go hand that copies the mcp-dispatch git-transport wire
+contract. The seam by which strangers interoperate is the on-disk JSONL form,
+not this Go API — a brother writing in any language joins the order by matching
+the bytes, not the binding.
 
-Conflict-free by construction. Each agent only ever appends to one file it
-owns:
+## The Rule (the core idea)
 
-- DMs: `lanes/<agent_id>.jsonl`
-- channel posts: `channels/<chan>/<agent_id>.jsonl`
+Conflict-free by the discipline of the order: **each scribe appends only to the
+one volume that bears his name, and to no other.**
 
-Because no two agents write the same file, every push is a fast-forward — no
-locks, no merge driver. Sending is *append one JSON line, commit, push*.
-Receiving is *fetch, read lanes past a reader-local cursor, filter to records
-addressed to me*.
+- private letters: `lanes/<agent_id>.jsonl`
+- public proclamations: `channels/<chan>/<agent_id>.jsonl`
 
-## Wire format
+Because no two hands ever touch one page, every offering to the shared library
+is a fast-forward — no locks are forged, no merge driver is summoned, the
+chronicle never blots nor needs the abbot's hand to reconcile. To **speak** is
+to inscribe one line, seal it (commit), and bear it abroad (push). To **listen**
+is to fetch the others' volumes and read past the ribbon you last left (a
+reader-local cursor), heeding only what is addressed to you.
 
-One JSON object per line (JSONL), UTF-8, `\n`-terminated. The header is all
-cleartext; only `body` may be encrypted. Field order is not significant.
+## The form of a line (wire format)
+
+One JSON object to a line (JSONL), in honest UTF-8, closed by `\n`. The heading
+is set down in plain hand for all to read; only the `body` may be enciphered.
+The order of fields is of no consequence — any scribe reads by name.
 
 | field | type | notes |
 |-------|------|-------|
@@ -41,10 +48,10 @@ cleartext; only `body` may be encrypted. Field order is not significant.
 | `sig` | string | signature; reserved/unenforced in v1 |
 | `body` | any | opaque payload (encryptable) |
 
-The lane filename is the authoritative identity: a line whose `from` disagrees
-with its lane owner is dropped as a spoof.
+The name upon the volume is the true name of its keeper. Should a page within
+profess a `from` not its keeper's, it is a forgery, and we strike it on reading.
 
-## Usage
+## The labor of the day (usage)
 
 ```go
 bus, _ := leat.New(repoDir, "alice", leat.WithRemote("origin"))
@@ -61,20 +68,33 @@ msgs, _ := bus.Receive(ctx)
 snap, _ := bus.Collect(ctx, leat.CollectOptions{TypeFilter: "atom"})
 ```
 
-`Receive` is the deliver-once tail (a cursor advances, no re-delivery).
-`Collect` folds last-write-wins state and never touches the cursor — set
-`Key` to a slot identity for per-slot LWW. For history (diff a lane's commits
-over time), use `bus.RepoDir()` + `bus.LaneRelPath(author, chan)` and run your
-own `git log`; the snapshot API intentionally does not encapsulate the repo
-away.
+`Receive` is the tail read once and never again — the ribbon advances, no line
+is delivered twice. `Collect` folds the chronicle to its latest word
+(last-write-wins) and never disturbs the ribbon; set `Key` to a slot identity
+for per-slot LWW. To read history proper — to trace how a single account changed
+across its entries — take `bus.RepoDir()` with `bus.LaneRelPath(author, chan)`
+and keep your own `git log`; the snapshot API does not wall the repository away,
+by design.
 
-## Scope
+## On forgery and trust (trust model)
 
-A durable, audited, cross-boundary, moderate-volume async bus — not a
-real-time firehose. Per-message commit+push is heavy by design; the value is
-durability and a permanent audit trail over inherited git-host auth/TLS.
-Encryption is a designed seam (the `body` is opaque), default-off in v1.
+A scribe's identity is the name upon his volume, and only that scribe may write
+beneath it — that authority is granted by the git host's push ACLs, not by any
+word within the record. A line professing a `from` at odds with the volume it
+lies in is struck as a forgery on reading. Thus the boundary of safety is write
+access to the repository: any brother who may push may append to *his own*
+account, and none may counterfeit another's without first defeating the host's
+own gatekeeping. `sig` is set aside for end-to-end signing but is not yet
+enforced in v1; the heading is plain hand, and only the `body` may be enciphered.
+
+## What this order is, and is not (scope)
+
+A durable, audited, cross-boundary bus of measured pace — a chronicle, not a
+crier in the square. Commit-and-push to the line is heavy by design; the worth
+of it is durability and a permanent audit trail laid over the git host's
+inherited auth and TLS. Encipherment is a seam left ready (the `body` is opaque),
+yet sheathed by default in v1.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE). *Go in peace.*

@@ -74,8 +74,8 @@ func ParseLine(line []byte) (Envelope, error) {
 }
 
 // Body marshals an arbitrary value into an opaque body payload. Consumers
-// (e.g. ettle, whose body is an atom slice) unmarshal it back themselves; leat
-// never inspects body contents.
+// unmarshal it back themselves (the body may be any application type — a text
+// message, an atom slice, a state snapshot); leat never inspects body contents.
 func Body(v any) (json.RawMessage, error) {
 	return json.Marshal(v)
 }
